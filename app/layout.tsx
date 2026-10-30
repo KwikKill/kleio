@@ -8,7 +8,7 @@ const mono = IBM_Plex_Mono({ variable: "--kl-mono", subsets: ["latin", "latin-ex
 
 export const metadata: Metadata = {
   title: "Kleio",
-  description: "Une frise chronologique que l'on zoome du Big Bang à hier, alimentée par Wikidata.",
+  description: "Une frise chronologique interactive pour explorer l'histoire du Big Bang à aujourd'hui, alimentée par Wikidata.",
 };
 
 export const viewport: Viewport = {
