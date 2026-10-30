@@ -1,0 +1,11 @@
+# Use Node.js for building the app
+FROM node:22-alpine AS build
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Build from source
+COPY . /src
+WORKDIR /src
+
+ENTRYPOINT ["./entrypoint.sh"]

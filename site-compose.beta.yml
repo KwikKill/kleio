@@ -1,0 +1,18 @@
+services:
+  kleio:
+    build:
+      context: ./kleio
+      dockerfile: Dockerfile.dev
+    container_name: kleio
+    image: site/kleio
+    # No cron in beta: trigger a harvest by hand with POST /api/harvest, or
+    # rebuild the committed snapshot with `npm run harvest`. KLEIO_DATA_DIR is
+    # unset, so a harvest lands in ./kleio/data (gitignored).
+    volumes:
+      - ./kleio:/src
+    env_file:
+      - ./kleio/.env
+    expose:
+      - "3000"
+    networks:
+      - sites

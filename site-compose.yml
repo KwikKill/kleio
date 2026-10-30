@@ -1,0 +1,38 @@
+services:
+  kleio:
+    build:
+      context: ./kleio
+      dockerfile: Dockerfile
+    container_name: kleio
+    image: site/kleio
+    environment:
+      # Weekly harvests land here and win over the snapshot baked into the image.
+      - KLEIO_DATA_DIR=/data
+    env_file:
+      - ./kleio/.env
+    volumes:
+      - kleio-data:/data
+    expose:
+      - "3000"
+    networks:
+      - sites
+    restart: unless-stopped
+
+  # Same sidecar pattern as hermes-cron: crond + curl, no access to anything
+  # but the app. Both sit on the shared `sites` network, so no root file has
+  # to declare a kleio-specific one.
+  kleio-cron:
+    build:
+      context: ./kleio/cron
+      dockerfile: Dockerfile
+    container_name: kleio-cron
+    depends_on:
+      - kleio
+    env_file:
+      - ./kleio/.env
+    networks:
+      - sites
+    restart: unless-stopped
+
+volumes:
+  kleio-data:

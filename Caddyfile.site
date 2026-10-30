@@ -1,0 +1,3 @@
+kleio.somi.{$WEBSITE_HOST} {
+	reverse_proxy kleio:3000
+}
