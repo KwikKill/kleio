@@ -17,6 +17,8 @@ interface Store {
   harvestedAt: string | null;
   lanes: Record<string, LaneStatus>;
   byLane: Map<string, WireEntry[]>;
+  byId: Map<string, Entry>; // for shared links pointing at one entry
+  total: number;
 }
 
 async function readIndex(file: string): Promise<IndexFile | null> {
@@ -35,8 +37,10 @@ async function load(): Promise<Store> {
     source = file ? "snapshot" : "empty";
   }
   const byLane = new Map<string, WireEntry[]>();
+  const byId = new Map<string, Entry>();
   const add = (e: Entry) => {
     const { lanes, ...wire } = e;
+    byId.set(e.id, e);
     for (const l of lanes) {
       const list = byLane.get(l) ?? [];
       list.push(wire);
@@ -45,7 +49,7 @@ async function load(): Promise<Store> {
   };
   DEEP_TIME_ENTRIES.forEach(add);
   file?.entries.forEach(add);
-  return { source, harvestedAt: file?.harvestedAt ?? null, lanes: file?.lanes ?? {}, byLane };
+  return { source, harvestedAt: file?.harvestedAt ?? null, lanes: file?.lanes ?? {}, byLane, byId, total: file?.entries.length ?? 0 };
 }
 
 let current: Promise<Store> | null = null;

@@ -1,14 +1,16 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans, Newsreader } from "next/font/google";
+import { SITE_DESCRIPTION } from "@/lib/preview";
 import "./globals.css";
 
 const display = Newsreader({ variable: "--kl-display", subsets: ["latin", "latin-ext"], weight: ["400", "600"] });
 const sans = IBM_Plex_Sans({ variable: "--kl-sans", subsets: ["latin", "latin-ext"], weight: ["400", "500", "600"] });
 const mono = IBM_Plex_Mono({ variable: "--kl-mono", subsets: ["latin", "latin-ext"], weight: ["400", "500", "600"] });
 
+// The page refines these per shared link (app/page.tsx).
 export const metadata: Metadata = {
   title: "Kleio",
-  description: "Une frise chronologique interactive pour explorer l'histoire du Big Bang à aujourd'hui, alimentée par Wikidata.",
+  description: SITE_DESCRIPTION,
 };
 
 export const viewport: Viewport = {

@@ -2,3 +2,4 @@
 Dockerfile* text eol=lf
 cron/crontab text eol=lf
 *.gz binary
+*.ttf binary

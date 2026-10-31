@@ -49,7 +49,8 @@ function pickDate(rows: Binding[], v: string): Dated | undefined {
   return best && { ...best, t: centerCoarse(best.t, best.p) };
 }
 
-const round = (t: number) => Math.round(t * 1e4) / 1e4;
+// About 30 s of resolution: well inside a day, and toCalendar snaps to the hour.
+const round = (t: number) => Math.round(t * 1e6) / 1e6;
 
 export async function harvest(onProgress: (p: Progress) => void = () => {}): Promise<IndexFile> {
   const presets = PRESETS.filter((p) => p.source.type !== "static");

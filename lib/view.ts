@@ -48,23 +48,5 @@ export function lerpView(a: View, b: View, k: number): View {
   return { from: c - s / 2, to: c + s / 2 };
 }
 
-// Shareable state lives in the hash: #v=1440,1660&l=politique,sciences
-export function readHash(hash: string): { view?: View; lanes?: string[] } {
-  const q = new URLSearchParams(hash.replace(/^#/, ""));
-  const out: { view?: View; lanes?: string[] } = {};
-  const v = q.get("v")?.split(",").map(Number);
-  if (v && v.length === 2 && v.every(Number.isFinite) && v[1] > v[0]) out.view = { from: v[0], to: v[1] };
-  const l = q.get("l");
-  if (l) out.lanes = l.split(",").filter(Boolean);
-  return out;
-}
-
-const compact = (t: number, s: number) => {
-  const digits = Math.max(0, Math.min(6, Math.ceil(-Math.log10(s / 1000))));
-  return Number(t.toFixed(digits)).toString();
-};
-
-export function writeHash(view: View, lanes: string[]): string {
-  const s = span(view);
-  return `#v=${compact(view.from, s)},${compact(view.to, s)}&l=${lanes.join(",")}`;
-}
+// What a link with no view opens on: the Renaissance, a crowded and familiar stretch.
+export const DEFAULT_VIEW: View = { from: 1440, to: 1660 };

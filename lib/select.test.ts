@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { endOf, selectWindow } from "./select";
 import type { WireEntry } from "./types";
-import { clampView, EARLIEST, readHash, writeHash, zoomAt } from "./view";
+import { readShare, shareQuery } from "./share";
+import { clampView, EARLIEST, zoomAt } from "./view";
 
 const NOW = 2026.83;
 const e = (id: string, start: number, w: number, end?: number): WireEntry => ({ id, label: id, start, sp: 9, w, kind: "person", ...(end ? { end, ep: 9 } : {}) });
@@ -43,8 +44,20 @@ describe("view", () => {
     expect(v.from).toBe(EARLIEST);
   });
 
-  it("round-trips the shareable hash", () => {
-    const h = writeHash({ from: 1440, to: 1660 }, ["politique", "sciences"]);
-    expect(readHash(h)).toEqual({ view: { from: 1440, to: 1660 }, lanes: ["politique", "sciences"] });
+});
+
+describe("share links", () => {
+  it("round-trips the query string, selection included", () => {
+    const q = shareQuery({ from: 1440, to: 1660 }, ["politique", "sciences"], "Q762");
+    expect(q).toBe("v=1440,1660&l=politique,sciences&s=Q762");
+    expect(readShare(`?${q}`, "")).toEqual({ view: { from: 1440, to: 1660 }, lanes: ["politique", "sciences"], selected: "Q762" });
+  });
+
+  it("still opens the first links, which used the hash", () => {
+    expect(readShare("", "#v=-600000000,2027&l=geologie")).toEqual({ view: { from: -600000000, to: 2027 }, lanes: ["geologie"] });
+  });
+
+  it("keeps malformed lane ids and local-only selections out of the link", () => {
+    expect(shareQuery(undefined, ["arts", "Bad Lane!"], "perso-abc")).toBe("l=arts");
   });
 });

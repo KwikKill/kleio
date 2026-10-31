@@ -29,7 +29,9 @@ export function toCalendar(t: Year): { y: number; m: number; d: number } {
   if (Math.abs(y) > CALENDAR_LIMIT) return { y, m: 1, d: 1 };
   const s = yearStartMs(y);
   const e = yearStartMs(y + 1);
-  const dt = new Date(s + (t - y) * (e - s));
+  // Stored dates are midnights rounded to a fraction of a year, so one can sit
+  // a few minutes before its midnight. Snapping to the hour keeps it on its day.
+  const dt = new Date(Math.round((s + (t - y) * (e - s)) / 3.6e6) * 3.6e6);
   return { y: dt.getUTCFullYear(), m: dt.getUTCMonth() + 1, d: dt.getUTCDate() };
 }
 

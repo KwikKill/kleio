@@ -70,6 +70,24 @@ const CURATED_NOTE: Record<string, string> = {
   kleio: "Jalon du temps profond, valeur approximative couramment admise.",
 };
 
+// The address bar already holds the view and the selection; this copies it
+// without hunting for it. Some embedded browsers refuse clipboard writes.
+function CopyLink() {
+  const [state, setState] = useState<"idle" | "done" | "failed">("idle");
+  const copy = () => {
+    navigator.clipboard
+      .writeText(window.location.href)
+      .then(() => setState("done"))
+      .catch(() => setState("failed"))
+      .finally(() => setTimeout(() => setState("idle"), 2000));
+  };
+  return (
+    <button type="button" className="kl-btn" onClick={copy} aria-live="polite">
+      {state === "done" ? "Lien copié" : state === "failed" ? "Copie refusée, utilise la barre d'adresse" : "Copier le lien"}
+    </button>
+  );
+}
+
 export default function BottomPanel(p: Props) {
   const e = p.selected?.entry;
   const curated = e && !e.id.startsWith("Q") ? CURATED_NOTE[e.id.split("-")[0]] : null;
@@ -111,6 +129,7 @@ export default function BottomPanel(p: Props) {
               )}
               <div className="links">
                 <button type="button" className="kl-btn" onClick={p.onCenter}>Centrer la frise</button>
+                <CopyLink />
                 {e.kind === "person" && <span className="kl-empty">{p.contemporaries} contemporain{p.contemporaries > 1 ? "s" : ""} dans la vue</span>}
                 {e.id.startsWith("Q") && <a href={`https://www.wikidata.org/wiki/${e.id}`} target="_blank" rel="noreferrer">Wikidata {e.id}</a>}
                 {p.details?.wikipedia && <a href={p.details.wikipedia} target="_blank" rel="noreferrer">Wikipédia</a>}

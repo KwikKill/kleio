@@ -16,9 +16,12 @@ a map: the most notable entries first, more of them as the window narrows.
   round), then "66 Ma" / "4,54 Ga" before the present.
 - **Lanes.** Science, arts, letters, music, politics, explorers, wars,
   treaties, disasters... plus two curated deep-time lanes (the ICS geological
-  scale and a few milestones of life). Add, remove and reorder them; the
-  setup is in the URL (`#v=1440,1660&l=politique,sciences`), so a view can be
-  shared as a link.
+  scale and a few milestones of life). Add, remove and reorder them.
+- **Shareable links with previews.** The address bar always holds the view,
+  the lanes and the selected entry (`?v=1440,1660&l=politique,sciences&s=Q762`).
+  Pasted in Discord, Slack or X, such a link shows its own card: the period
+  or the entry as a title and a small timeline of that window drawn on the
+  server (see "Share previews" below).
 - **Semantic zoom.** Each lane gets the most notable entries of the window
   (by Wikidata sitelink count), spread across it so a crowded century does not
   push a quiet one off the screen. A density strip under each lane shows
@@ -118,6 +121,10 @@ and are labelled with "≈".
 app/api/entries   GET  window of each lane: selected entries + density histogram
 app/api/meta      GET  harvest date, per-lane counts and errors, harvest progress
 app/api/harvest   POST start a harvest (Bearer KLEIO_HARVEST_SECRET), answers 202
+app/og            GET  1200x630 share image for a link's view / lanes / entry
+app/page.tsx      per-link <title>, description, Open Graph and Twitter tags
+lib/share.ts      link format, read and written by the client, parsed by the server
+lib/preview.ts    what a link previews (shared by the tags and the image)
 lib/harvest.ts    the two-stage harvest
 lib/store.ts      in-memory index: data volume first, committed snapshot second
 lib/select.ts     semantic zoom (bucketed top-N) shared by server and custom lanes
@@ -133,6 +140,25 @@ The client asks for the view plus a quarter on each side, so small pans
 redraw from what is already loaded; requests are debounced and aborted when
 the view moves on. The canvas is redrawn on every view change (a few hundred
 shapes), labels are measured once and cached.
+
+### Share previews
+
+The state moved from the hash to the query string because only the query
+reaches the server; links from before (`#v=...`) still open and are rewritten.
+`generateMetadata` in `app/page.tsx` reads the query, so `/` is a partial
+prerender: the client shell stays static and the metadata is computed per
+request. Next.js puts it in the `<head>` for link-preview bots (checked with
+the Discordbot, Twitterbot and facebookexternalhit user agents) and streams
+it for browsers. The page title template of the layout does not apply to a
+page of the same segment, hence the absolute titles.
+
+`/og` draws the card with `ImageResponse` (Satori), which only takes TTF, OTF
+or WOFF fonts: Newsreader and IBM Plex are bundled as TTF in `assets/fonts`,
+with their OFL licences. French number formatting uses U+202F as a thousands
+separator, which is swapped for a regular no-break space before drawing.
+Label widths cannot be measured there, so `lib/preview-layout.ts` estimates
+them from the average advance of Plex Sans. Behind Caddy, absolute URLs come
+from `X-Forwarded-Host` / `X-Forwarded-Proto`.
 
 ## Running it
 

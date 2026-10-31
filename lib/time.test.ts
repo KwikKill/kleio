@@ -31,6 +31,13 @@ describe("parsing", () => {
     expect(toCalendar(julianToGregorian(fromCalendar(1582, 10, 4)))).toEqual({ y: 1582, m: 10, d: 14 });
   });
 
+  it("keeps a rounded midnight on its own day", () => {
+    // Leonardo's death as stored in the first snapshots: 1519.3589 is 12 May 1519
+    // minus about 20 minutes once rounded to 1e-4 year.
+    expect(toCalendar(1519.3589)).toEqual({ y: 1519, m: 5, d: 12 });
+    expect(formatPoint(1519.3589, 11, NOW, true)).toBe("2 mai 1519");
+  });
+
   it("moves coarse dates to the middle of their interval", () => {
     expect(centerCoarse(1100, 7)).toBe(1050);
     expect(centerCoarse(1001, 7)).toBe(1050);

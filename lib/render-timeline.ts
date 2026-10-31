@@ -128,8 +128,14 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, d: DrawInput): Hit[]
 
     const rowsTop = top + HEAD_H;
     const nRows = Math.max(1, Math.floor((d.laneH - HEAD_H - STRIP_H - 4) / ROW_H));
-    const placed: [number, number][][] = Array.from({ length: nRows }, () => []);
-    const free = (r: number, a: number, b: number) => placed[r].every(([p, q]) => b + 4 < p || a - 4 > q);
+    // [start, end, labelInside]. Two bars carrying their own labels may touch
+    // (consecutive geological periods); anything with an outside label keeps a gap.
+    const placed: [number, number, boolean][][] = Array.from({ length: nRows }, () => []);
+    const free = (r: number, a: number, b: number, bare: boolean) =>
+      placed[r].every(([p, q, bare2]) => {
+        const gap = bare && bare2 ? -1 : 4;
+        return b + gap < p || a - gap > q;
+      });
 
     // Most notable first, so crowding hides the minor entries.
     const items = [...win.items].sort((a, b) => b.w - a.w);
@@ -155,10 +161,10 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, d: DrawInput): Hit[]
       else [a, b, lx] = [s - 10 - tw, s + 6, s - 10 - tw];
 
       let r = -1;
-      if (e.row !== undefined) r = e.row < nRows && free(e.row, a, b) ? e.row : -1;
-      else for (let k = 0; k < nRows && r < 0; k++) if (free(k, a, b)) r = k;
+      if (e.row !== undefined) r = e.row < nRows && free(e.row, a, b, inside) ? e.row : -1;
+      else for (let k = 0; k < nRows && r < 0; k++) if (free(k, a, b, inside)) r = k;
       if (r < 0) continue;
-      placed[r].push([a, b]);
+      placed[r].push([a, b, inside]);
 
       const y = rowsTop + r * ROW_H;
       const sel = e.id === d.selectedId;

@@ -1,12 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { DEEP_TIME_ENTRIES } from "@/lib/deep-time";
 import { DEFAULT_LANES, liveQueryFor, type LanePreset, PRESET_BY_ID } from "@/lib/lanes";
 import type { Marker } from "@/lib/render-timeline";
 import { endOf, openKind, selectWindow } from "@/lib/select";
+import { readShare, shareQuery } from "@/lib/share";
 import { nowYear } from "@/lib/time";
 import type { EntriesResponse, LaneWindow, MetaResponse, WireEntry } from "@/lib/types";
-import { clampView, EARLIEST, FUTURE_MARGIN, fitSpan, lerpView, readHash, type View, writeHash, zoomAt } from "@/lib/view";
+import { clampView, DEFAULT_VIEW, EARLIEST, FUTURE_MARGIN, fitSpan, lerpView, type View, zoomAt } from "@/lib/view";
 import { type EntityDetails, fetchEntity, runCustomQuery, type SearchHit } from "@/lib/wikidata-client";
 import BottomPanel, { type CustomDef, type CustomState, type FocusLane } from "./BottomPanel";
 import LanePicker from "./LanePicker";
@@ -73,10 +75,19 @@ export default function Kleio() {
   return <App />;
 }
 
+// A search result or a shared Wikidata item, as a timeline entry.
+function entryFromDetails(d: EntityDetails & { start: NonNullable<EntityDetails["start"]> }): WireEntry {
+  return {
+    id: d.id, label: d.label, start: d.start.t, sp: d.start.p, ...(d.start.julian ? { sj: 1 as const } : {}),
+    ...(d.end && d.end.t >= d.start.t ? { end: d.end.t, ep: d.end.p, ...(d.end.julian ? { ej: 1 as const } : {}) } : {}),
+    w: 0, kind: d.isPerson ? "person" : "event",
+  };
+}
+
 function App() {
   const [now] = useState(nowYear);
-  const [initial] = useState(() => readHash(window.location.hash));
-  const [view, setView] = useState<View>(() => clampView(initial.view ?? { from: 1440, to: 1660 }, now));
+  const [initial] = useState(() => readShare(window.location.search, window.location.hash));
+  const [view, setView] = useState<View>(() => clampView(initial.view ?? DEFAULT_VIEW, now));
   const [custom, setCustom] = useState<Record<string, CustomDef>>(() => load(CUSTOM_KEY, {}));
   const [laneIds, setLaneIds] = useState<string[]>(() => {
     const defs = load<Record<string, CustomDef>>(CUSTOM_KEY, {});
@@ -96,7 +107,14 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [meta, setMeta] = useState<MetaResponse | null>(null);
-  const [selected, setSelected] = useState<{ entry: WireEntry; laneId: string | null } | null>(null);
+  // A shared link can point at an entry: curated ones are known here, Wikidata
+  // items are fetched once mounted (see below).
+  const [selected, setSelected] = useState<{ entry: WireEntry; laneId: string | null } | null>(() => {
+    const curated = DEEP_TIME_ENTRIES.find((e) => e.id === initial.selected);
+    if (!curated) return null;
+    const { lanes, ...entry } = curated;
+    return { entry, laneId: lanes[0] ?? null };
+  });
   const [details, setDetails] = useState<EntityDetails | null>(null);
   const [detailsState, setDetailsState] = useState<"idle" | "loading" | "error">("idle");
   const [focus, setFocus] = useState<string | null>(null);
@@ -141,9 +159,25 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const id = initial.selected;
+    if (!id?.startsWith("Q")) return;
+    const ctrl = new AbortController();
+    fetchEntity(id, ctrl.signal)
+      .then((d) => {
+        if (!d.start) return;
+        setSelected({ entry: entryFromDetails({ ...d, start: d.start }), laneId: null });
+        setDetails(d);
+        setPanel(true);
+      })
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, [initial.selected]);
+
+  useEffect(() => {
     const onResize = () => setWidth(window.innerWidth);
+    // Older links kept the state in the hash; editing one by hand still works.
     const onHash = () => {
-      const h = readHash(window.location.hash);
+      const h = readShare("", window.location.hash);
       if (h.view) animateTo(clampView(h.view, now));
       if (h.lanes) setLaneIds(h.lanes.filter((id) => PRESET_BY_ID.has(id) || id in load<Record<string, CustomDef>>(CUSTOM_KEY, {})));
     };
@@ -159,10 +193,12 @@ function App() {
     };
   }, [animateTo, now]);
 
+  // The address bar always holds a link to what is on screen, previewable once shared.
+  const selectedId = selected?.entry.id ?? null;
   useEffect(() => {
-    const t = setTimeout(() => history.replaceState(null, "", writeHash(view, laneIds)), 300);
+    const t = setTimeout(() => history.replaceState(null, "", `${window.location.pathname}?${shareQuery(view, laneIds, selectedId)}`), 300);
     return () => clearTimeout(t);
-  }, [view, laneIds]);
+  }, [view, laneIds, selectedId]);
 
   // --- data
   const padded = useMemo(() => {
@@ -272,11 +308,7 @@ function App() {
         setSearchError(`« ${d.label} » n'a pas de date exploitable sur Wikidata.`);
         return;
       }
-      const entry: WireEntry = {
-        id: d.id, label: d.label, start: d.start.t, sp: d.start.p, ...(d.start.julian ? { sj: 1 as const } : {}),
-        ...(d.end && d.end.t >= d.start.t ? { end: d.end.t, ep: d.end.p, ...(d.end.julian ? { ej: 1 as const } : {}) } : {}),
-        w: 0, kind: d.isPerson ? "person" : "event",
-      };
+      const entry = entryFromDetails({ ...d, start: d.start });
       setSelected({ entry, laneId: null });
       setDetails(d);
       setDetailsState("idle");
